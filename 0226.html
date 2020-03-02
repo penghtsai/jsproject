@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+
+<meta charset="utf-8">
+<title>My Project</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css">
+<link href="https://cdn.datatables.net/buttons/1.6.1/css/buttons.dataTables.min.css">
+
+</head>
+
+<body>
+
+<div class="panel panel-default">
+	
+	<div class="panel-heading">
+		<h4>Table of Used Car Listing Prices</h4>
+		<a class="button butn"
+		href="https://docs.google.com/spreadsheets/d/1ILB9lUsCnZ7bh3UX9nJ-enyfr-Cqjj543xfXPmdG9Zc/edit#gid=846789546" target="_blank">
+		Click here to see the source data
+		</a>		
+	</div>
+	
+	<div class="panel-body">
+		<h5 style="color: #1565C0">Export the source data:</h5>
+	
+		<div class="tb_user_data">
+		</div>
+		
+		<div class="well clearfix">
+        <a class="btn btn-primary pull-right add-record" data-added="0"><i class="glyphicon glyphicon-plus"></i>&nbsp;Add Row</a>
+		</div>
+	
+		<div class="chart">
+			<canvas id="myChart"></canvas>
+		</div>	
+	</div>
+	
+</div>
+	
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>	
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>	
+<script src="https://cdn.datatables.net/buttons/1.6.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/1.6.1/js/buttons.flash.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/1.6.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/1.6.1/js/buttons.print.min.js"></script>	
+<script src="https://cdn.datatables.net/plug-ins/1.10.20/api/row().show().js"></script>
+
+<script type="text/javascript">
+$(document).ready(function($)
+{	  
+    $.getJSON('https://spreadsheets.google.com/feeds/list/1ILB9lUsCnZ7bh3UX9nJ-enyfr-Cqjj543xfXPmdG9Zc/oe05mr4/public/values?alt=json', function(data) {
+    	
+        var sheetData = data.feed.entry;
+		
+		//create data table
+		var tb = '';
+		tb +='<table class="table tb_code" id="gTable" style="width:100%">'
+
+		//create table header
+		tb +='<thead>';
+			tb +='<tr>';
+			tb +='<th>Listing#</th>';
+			tb +='<th>ID</th>';
+			tb +='<th>Brand</th>';
+			tb +='<th>Year</th>';
+			tb +='<th>Price</th>';
+			tb +='<th>Action</th>';
+			tb +='</tr>';
+		tb +='</thead>';
+			
+		//create table body
+		tb +='<tbody id="tb-body">';
+
+			//create table body rows			
+			var i;
+			for (i = 0; i < sheetData.length; i++)
+			{				
+				var row_id = (i+1);
+				var id = sheetData[i]['gsx$no']['$t'];
+				var brand = sheetData[i]['gsx$brand']['$t'];
+				var year = sheetData[i]['gsx$year']['$t'];
+				var price = sheetData[i]['gsx$price']['$t'];
+				
+				//loop through row data
+				tb +='<tr id="rec-' + row_id + '">';
+				tb +='<td><span class="sn">'+row_id+'</span>.</td>';
+				tb +='<td><div class="row_data" edit_type="click" col_name="id">'+id+'</div></td>';
+				tb +='<td><div class="row_data" edit_type="click" col_name="brand">'+brand+'</div></td>';
+				tb +='<td><div class="row_data" edit_type="click" col_name="year">'+year+'</div></td>';
+				tb +='<td><div class="row_data" edit_type="click" col_name="price">'+price+'</div></td>';
+
+				//loop on Action
+				tb +='<td>';					 
+				tb +='<span class="btn_edit"><a href="#" class="btn btn-link" data-id="' + row_id + '">Edit</a>|</span>';
+												
+				//only show this button if delete button is clicked
+				tb +='<span class="btn_delete"><a href="#" class="btn btn-link delete-record" data-id="' + row_id + '">Delete</a></span>';
+				
+				//only show these buttons if edit button is clicked
+				tb +='<span class="btn_save"><a href="#" class="btn btn-link" data-id="' + row_id + '">Save</a>|</span>';
+				tb +='<span class="btn_cancel"><a href="#" class="btn btn-link" data-id="' + row_id + '">Cancel</a></span>';
+				
+				tb +='</td>';
+								
+				tb +='</tr>';
+			}	
+
+		tb +='</tbody>';
+
+		tb +='</table>'
+
+		//output table data
+		$(document).find('.tb_user_data').html(tb);
+
+		$(document).find('.btn_save').hide();
+		$(document).find('.btn_cancel').hide();		
+			
+		var dataTable = $('#gTable').DataTable(
+		{			
+			stateSave: true,
+			stateSaveCallback: function(settings,data) {
+				localStorage.setItem( 'DataTables_' + settings.sInstance, JSON.stringify(data) )
+			},
+			stateLoadCallback: function(settings) {
+				return JSON.parse( localStorage.getItem( 'DataTables_' + settings.sInstance ) )
+			},
+			"scrollX": true,
+			"scrollY": "350px",
+			"scrollCollapse": false,
+			"bInfo": false,
+			"bPaginate": false,
+			dom: 'Bfrtip',
+			buttons: [
+				{
+					extend: 'copy',
+					text: 'Copy',
+					exportOptions: {
+						columns: [ 0, 1, 2, 3, 4 ]				
+					}
+				},
+				{
+					extend: 'csv',
+					text: 'CSV',
+					exportOptions: {
+						columns: [ 0, 1, 2, 3, 4 ]
+					}
+				},
+				{
+					extend: 'excel',
+					text: 'Excel',
+					exportOptions: {
+						columns: [ 0, 1, 2, 3, 4 ]
+					}
+				},
+				{
+					extend: 'pdf',
+					text: 'PDF',
+					className: 'exportPDF',
+					filename: 'Source data',
+					exportOptions: {
+						columns: [ 0, 1, 2, 3, 4 ]
+				}
+    
+			}]
+		});				
+
+		$(document).delegate('a.add-record', 'click', function(event)	
+		{
+			event.preventDefault(); 
+			
+			var rowId = $('#gTable tbody').find('tr').length + 1;
+			
+			var	html ='<tr id="">';			
+			html +='<td><span class="sn"></span>.</td>';
+			html +='<td><div class="row_data bg-warning" edit_type="click" col_name="id"></div></td>';
+			html +='<td><div class="row_data bg-warning" edit_type="click" col_name="brand"></div></td>';
+			html +='<td><div class="row_data bg-warning" edit_type="click" col_name="year"></div></td>';
+			html +='<td><div class="row_data bg-warning" edit_type="click" col_name="price"></div></td>';
+
+				//edit Action
+				html +='<td>';
+				html +='<span class="btn_edit"><a href="#" class="btn btn-link" data-id="' + rowId + '">Edit</a>|</span>';
+				
+				//only show this button if delete button is clicked
+				html +='<span class="btn_delete"><a href="#" class="btn btn-link delete-record" data-id="' + rowId + '">Delete</a></span>';
+				
+				//only show these buttons if edit button is clicked
+				html +='<span class="btn_save"> <a href="#" class="btn btn-link" data-id="' + rowId + '">Save</a>|</span>';
+				html +='<span class="btn_cancel"><a href="#" class="btn btn-link" data-id="' + rowId + '">Cancel</a> </span>';
+								
+				html +='</td>';
+								
+			html +='</tr>';
+			
+			var content = $(html);
+			size = $('#gTable >tbody >tr').length + 1,
+			element = null,    
+			element = content.clone();
+			element.attr('id', 'rec-'+size);
+			element.find('.delete-record').attr('data-id', size);
+			element.appendTo('#tb-body');
+			element.find('.sn').html(size);			
+	
+		});
+		
+		
+		//make div editable
+		$(document).on('click', '.row_data', function(event) 
+		{
+			event.preventDefault(); 
+		
+			var tb_row = $(this).closest('tr');
+		
+			//hide edit and delete buttons
+			tb_row.find('.btn_edit').hide();
+			tb_row.find('.btn_delete').hide();
+			
+		
+			//show save and cancel buttons
+			tb_row.find('.btn_save').show();
+			tb_row.find('.btn_cancel').show();
+			
+			if($(this).attr('edit_type') == 'button')
+			{
+				return false; 
+			}
+
+			//make div editable
+			$(this).closest('div').attr('contenteditable', 'true');
+			//add bg css
+			$(this).addClass('bg-warning').css('padding','4px');
+
+			$(this).focus();
+		
+			//original entry
+			tb_row.find('.row_data').each(function(index, val) 
+			{  
+				$(this).attr('original_entry', $(this).html());
+			}); 		
+			
+		});
+		
+
+		
+		//button > edit	
+		$(document).on('click', '.btn_edit', function(event) 
+		{
+			event.preventDefault();
+		
+			var tb_row = $(this).closest('tr');		
+
+			//hide edit and delete buttons
+			tb_row.find('.btn_edit').hide();
+			tb_row.find('.btn_delete').hide();
+			
+		
+			//show save and cancel buttons
+			tb_row.find('.btn_save').show();
+			tb_row.find('.btn_cancel').show();
+
+			//make the whole row editable
+			tb_row.find('.row_data')
+			.attr('contenteditable', 'true')
+			.attr('edit_type', 'button')
+			.addClass('bg-warning')
+			.css('padding','3px')
+
+			//original entry
+			tb_row.find('.row_data').each(function(index, val) 
+			{  
+				$(this).attr('original_entry', $(this).html());
+			}); 		
+			
+		});
+
+		//button > cancel	
+		$(document).on('click', '.btn_cancel', function(event) 
+		{
+			event.preventDefault();
+		
+			var tb_row = $(this).closest('tr');	
+			
+			//hide save, cancel buttons
+			tb_row.find('.btn_save').hide();
+			tb_row.find('.btn_cancel').hide();
+			
+			
+			//show edit and delete buttons
+			tb_row.find('.btn_edit').show();
+			tb_row.find('.btn_delete').show();
+			
+			//make the whole row editable
+			tb_row.find('.row_data')
+			.attr('edit_type', 'click')
+			.removeClass('bg-warning')
+			.css('padding','')
+			
+			tb_row.find('.row_data').each(function(index, val) 
+			{
+				$(this).html( $(this).attr('original_entry') ); 
+			});
+			
+		});
+		
+		//save whole row entry	
+		$(document).on('click', '.btn_save', function(event) 
+		{
+			event.preventDefault();
+			
+			var tb_row = $(this).closest('tr');
+			
+			var row_id = tb_row.attr('row_id');
+			
+			//hide save, cancel buttons
+			tb_row.find('.btn_save').hide();
+			tb_row.find('.btn_cancel').hide();
+			
+			
+			//show edit and delete buttons
+			tb_row.find('.btn_edit').show();
+			tb_row.find('.btn_delete').show();
+			
+			//make the whole row editable
+			tb_row.find('.row_data')
+			.attr('edit_type', 'click')
+			.removeClass('bg-warning')
+			.css('padding','')
+			
+			//get row data
+			var arr = {}; 
+			tb_row.find('.row_data').each(function(index, val) 
+			{   
+				var col_name = $(this).attr('col_name');  
+				var col_val  =  $(this).html();
+				arr[col_name] = col_val;
+			});
+		});
+	
+		
+		// delete row
+		$(document).delegate('a.delete-record', 'click', function(event)
+		{
+			event.preventDefault();    
+			var didConfirm = confirm("Are you sure You want to delete");
+			if (didConfirm == true) {
+				var id = $(this).attr('data-id');
+				var targetDiv = $(this).attr('targetDiv');
+				$('#rec-' + id).remove();
+      
+				//regnerate index number on table
+				$('#tb-body tr').each(function(index){
+					$(this).find('span.sn').html(index+1);
+				});
+			
+				return true;
+		
+			} else {
+			
+				return false;
+			}
+		});
+		
+	})
+	.fail(function() {
+		console.log( "error" );
+	})
+	.always(function() {
+		console.log( "complete" );
+	});
+	
+	function BuildChart(labels, values, chartTitle) {
+		var data = {
+				labels: labels,
+				datasets: [{
+					label: chartTitle, // Name the series
+					data: values,
+					backgroundColor: ['rgb(54, 162, 235)',
+									  'rgb(54, 162, 235)',
+								      'rgb(54, 162, 235)',
+								      'rgb(54, 162, 235)',
+								      'rgb(54, 162, 235)',
+								      'rgb(54, 162, 235)',
+								      'rgb(54, 162, 235)',
+								      'rgb(54, 162, 235)',
+								      'rgb(54, 162, 235)',
+								      'rgb(54, 162, 235)',
+									 ],
+				}],
+		};
+
+		var ctx = document.getElementById("myChart").getContext('2d');
+		var myChart = new Chart(ctx, {
+									type: 'bar',
+									data: data,
+									options: {
+										responsive: true, // Instruct chart js to respond nicely.
+										maintainAspectRatio: false, // Add to prevent default behavior of full-width/height 
+										scales: {
+											xAxes: [{
+												scaleLabel: {
+													display: true,
+													labelString: 'Brand'
+												}
+											}],
+											yAxes: [{
+												scaleLabel: {
+													display: true,
+													labelString: 'Price'
+												}
+											}]
+										},
+									}
+		});
+
+		return myChart;
+	};
+
+	var xhttp = new XMLHttpRequest();
+	
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			var json = JSON.parse(this.response);
+			console.log(json);
+
+			// Map JSON labels  back to values array
+			var labels = json.feed.entry.map(function (e) {
+				return e.gsx$brand.$t;
+			});
+      
+			// Map JSON values back to values array
+			var values = json.feed.entry.map(function (e) {
+				return e.gsx$price.$t;
+			});
+
+			BuildChart(labels, values, "Price by brand");
+		}
+	};
+	
+	xhttp.open("GET", "https://spreadsheets.google.com/feeds/list/1ILB9lUsCnZ7bh3UX9nJ-enyfr-Cqjj543xfXPmdG9Zc/oe05mr4/public/values?alt=json", false);
+	xhttp.send();
+		
+});
+
+</script>
+
+</body>
+
+</html>
