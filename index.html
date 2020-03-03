@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+
+<head>
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/handsontable@latest/dist/handsontable.full.min.css">
+<link rel="stylesheet" type="text/css" href="https://handsontable.com/static/css/main.css">
+<script src="https://cdn.jsdelivr.net/npm/handsontable@latest/dist/handsontable.full.min.js"></script>
+
+</head>
+
+<body>
+
+<div id="hot"></div>
+<div id="export-buttons" class="visible">
+	<button id="export-csv" class="btn size-medium bg-blue text-white shadow hover-moveup" style="margin-right: 5px;">Export to a .csv file
+	</button>
+	
+	<button id="export-xls" class="btn size-medium bg-green text-white shadow hover-moveup">Export to a .xls file
+	</button>
+</div>
+
+<script>
+
+var dataObject = [
+  {
+    id: 1,
+    level: 0.9033,
+    units: 'EUR / USD',
+    onedChng: 0.0026
+  },
+  {
+    id: 2,
+    level: 124.3870,
+    units: 'JPY / USD',
+    onedChng: 0.0001
+  }
+];
+
+var hotElement = document.querySelector('#hot');
+var hotElementContainer = hotElement.parentNode;
+
+var hotSettings = {
+  data: dataObject,
+ 
+  columns: [
+    {
+      data: 'id',
+      type: 'numeric',
+      width: 40
+    },   
+    {
+      data: 'level',
+      type: 'numeric',
+      numericFormat: {
+        pattern: '0.0000'
+      }
+    },
+    {
+      data: 'units',
+      type: 'text'
+    },    
+    {
+      data: 'onedChng',
+      type: 'numeric',
+      numericFormat: {
+        pattern: '0.00%'
+      }
+    }
+  ],
+  stretchH: 'all',
+  width: 805,
+  autoWrapRow: true,
+  height: 487,
+  maxRows: 22,
+  licenseKey: 'non-commercial-and-evaluation',
+  exportFile: true,
+  columnHeaders: true,
+  rowHeaders: true,
+  colHeaders: [
+    'ID',   
+    'Level',
+    'Units',    
+    'Change'
+  ]
+};
+var hot = new Handsontable(hotElement, hotSettings);
+
+document.getElementById("export-csv").addEventListener("click", function(event) { hot.getPlugin("exportFile").downloadFile("csv", {filename: "Handsontable CSV Export example"});})
+
+document.getElementById("export-xls").addEventListener("click", function(event) { hot.getPlugin("exportFile").downloadFile("xls", {filename: "Handsontable XLS Export example"});})
+
+
+</script>
+</body>
+</html>
